@@ -92,6 +92,13 @@ Fairness by sex (equal opportunity): the recall gap between men and women falls 
   Test: used once, in `06_final_test.py`, then for the fairness comparison.
 * All preprocessing is inside the `Pipeline`, so it is refitted on the training folds only.
 
+## Limits
+
+* The data are from 1994 and have no date or person id, so we could not test a time split or a group split.
+* The best CV score of each Optuna study is slightly optimistic. We report validation and test scores, and we did not run a nested CV.
+* Sex is a variable of the model and the group thresholds use it at decision time. This may not be allowed in a real setting.
+* The false positive rate gap between men and women is not removed, so equalised odds is not reached.
+
 ## Use of AI
 
 We used an AI coding assistant to write a first version of the code and of the report,
