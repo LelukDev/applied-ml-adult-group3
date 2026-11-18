@@ -108,3 +108,7 @@ for what the group did and checked itself.
 ## Report structure
 
 The report (`report/report_group3.pdf`) has 9 pages of main text: business problem and data (1), exploratory analysis and split (2), features (3), imbalance and models (4), tuning and run log (5), explainability (6), calibration (7), fairness (8) and conclusion (9). The contribution statement, the AI-use statement and the appendices come after.
+
+## Team
+
+Group 3: Joshaï Bensoussan, Lucas Noury, Elie Maarek. Lucas worked mostly on the analysis (data exploration, models, tuning, explanations, calibration, fairness audit). Joshaï worked mostly on the report (creation, structure, format). Elie helped on the analysis and on checking the results. The full statement is in the report.
