@@ -331,7 +331,7 @@ callout(s, 8.8, 1.6, 3.8, N["brierSkill"], "Brier skill score")
 box(s, 0.6, 3.75, 12.1, 3.2, ["Lessons: the model family mattered more than tuning, and threshold tuning beat resampling",
                               "Ready to use: one saved Pipeline served by an API (POST /predict)",
                               "Limits: 1994 data, one split, rows assumed independent, binary sex; using sex at decision time may be illegal",
-                              "AI use: an AI coding assistant was used for the code, the report, the figures and the slides (see the report)"],
+                              "AI use: for the analysis, an AI coding assistant helped with the code and the visualisations (see the report)"],
     19, bullet=True, space=9)
 
 
