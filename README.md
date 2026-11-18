@@ -68,6 +68,21 @@ Outputs: `reports/tables` and `reports/figures` (used in the report), `runs/run_
 (one row per run with its parameters, metrics and artifact), `runs/models` (fitted pipelines,
 not versioned). The report is in `report/`.
 
+## Main results
+
+Final model: tuned LightGBM, probabilities kept as they are, decision threshold 0.34.
+Test set, used once (PR-AUC with a 95% bootstrap interval):
+
+| Metric | Value |
+|---|---|
+| PR-AUC | 0.837 [0.825, 0.848] |
+| ROC-AUC | 0.932 |
+| F1 / precision / recall | 0.738 / 0.686 / 0.798 |
+| Brier score / ECE | 0.086 / 0.011 |
+
+Fairness by sex (equal opportunity): the recall gap between men and women falls from
+11.0 to 2.9 points with one threshold per sex, for a drop of 0.3 points of accuracy.
+
 ## Protocol
 
 * The 52 exact duplicates are removed before the split.
