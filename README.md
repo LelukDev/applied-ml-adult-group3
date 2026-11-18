@@ -43,6 +43,12 @@ Report and slides:
 | `make_slides.py` | Builds `slides/presentation_group3.pptx` |
 | `serve.py` | Small FastAPI app that serves the final model |
 
+Run the tests:
+
+```bash
+pytest
+```
+
 Serve the model:
 
 ```bash
