@@ -230,7 +230,7 @@ box(title, 0.9, 5.3, 11.5, 1.2, ["Applied ML: Foundations, Engineering & Evaluat
                                  "Josha\u00ef Bensoussan, Lucas Noury, Elie Maarek"], 18, color="FFFFFF")
 
 s = new_slide("Goal: predict who earns more than 50K",
-              "Speaker A. What: a bank wants to offer a premium product without asking for a payslip, so we predict income from socio-demographic data "
+              "Speaker Joshaï. What: a bank wants to offer a premium product without asking for a payslip, so we predict income from socio-demographic data "
               "(UCI Adult). Why: three questions: is the ranking good, can we trust the probabilities, is the model fair? The roadmap shows the steps "
               "and the requirement number of each one. What could invalidate it: a census sample from 1994 is not a bank's customers. "
               "Likely question: why this dataset? It is the one chosen by the group; it has a sensitive attribute (sex) for the fairness audit.")
@@ -250,7 +250,7 @@ box(s, 0.6, 6.3, 12.1, 0.4, ["Requirement numbers of the project brief. At the e
     14, color=GREY)
 
 s = new_slide("Clean data and an honest split",
-              "Speaker A. What: 52 exact duplicates removed before the split, stratified 60/20/20 split with seed 42, test set used once. "
+              "Speaker Lucas. What: 52 exact duplicates removed before the split, stratified 60/20/20 split with seed 42, test set used once. "
               "Why: the same person in train and test would inflate the scores. What could invalidate it: no date and no person id, so we cannot "
               "make a time or group split; rows are assumed independent. Metric: PR-AUC, because three people out of four are at most 50K and "
               "accuracy hides the minority class. Likely question: what is the baseline? Always predicting the prevalence: PR-AUC 0.239.")
@@ -260,7 +260,7 @@ with_figure(s, [f"{N['nClean']} people after removing {N['nDup']} duplicates, {N
                 "No date or ID: rows are assumed independent"], "slide_eda.png")
 
 s = new_slide("New variables, no resampling",
-              "Speaker A. What: missing as a category, five new variables, three remedies compared with the same CV. "
+              "Speaker Lucas. What: missing as a category, five new variables, three remedies compared with the same CV. "
               "Why: remedies must be justified by results. What could invalidate it: SMOTE interpolates one-hot columns, we did not test SMOTENC. "
               "Likely question: why not use class weights? They make the probabilities over-confident.")
 with_figure(s, [f"Missing occupation is informative: {N['posRateMissOcc']} earn more than 50K, against {N['posRatePresentOcc']}",
@@ -269,7 +269,7 @@ with_figure(s, [f"Missing occupation is informative: {N['posRateMissOcc']} earn 
                 "We keep the true class mix and tune the threshold"], "slide_remedies.png")
 
 s = new_slide("LightGBM ranks best",
-              "Speaker B. What: logistic regression, random forest, LightGBM, each one Pipeline. Why: each step adds something "
+              "Speaker Lucas. What: logistic regression, random forest, LightGBM, each one Pipeline. Why: each step adds something "
               "(non-linearity, then sequential correction). What could invalidate it: same folds for all models. "
               "Likely question: why does LightGBM beat the forest? Boosting corrects the errors step by step.")
 with_figure(s, [f"No skill: PR-AUC {N['cvDummyNone']} (the prevalence)",
@@ -278,7 +278,7 @@ with_figure(s, [f"No skill: PR-AUC {N['cvDummyNone']} (the prevalence)",
                 "One Pipeline per model, refitted in each fold"], "slide_models.png")
 
 s = new_slide("Tuning gives a small gain",
-              "Speaker B. What: one Optuna study per model, 5-fold stratified CV on the training set. Why: tune with CV, report with validation "
+              "Speaker Elie. What: one Optuna study per model, 5-fold stratified CV on the training set. Why: tune with CV, report with validation "
               "and test. What could invalidate it: the best CV score is optimistic, we did not use nested CV. "
               "Likely question: why not nested CV? It is optional in the course and we keep an untouched test set.")
 with_figure(s, [f"Optuna: {N['nTrialsLog']}, {N['nTrialsRf']} and {N['nTrialsLgb']} trials, 5-fold CV",
@@ -287,7 +287,7 @@ with_figure(s, [f"Optuna: {N['nTrialsLog']}, {N['nTrialsRf']} and {N['nTrialsLgb
                 f"{N['nRuns']} runs logged with parameters, metrics and artifact"], "slide_optuna.png")
 
 s = new_slide("The model relies on sensible signals",
-              "Speaker B. What: TreeExplainer on the validation set, one-hot columns summed back into variables. Why: check that the important "
+              "Speaker Elie. What: TreeExplainer on the validation set, one-hot columns summed back into variables. Why: check that the important "
               "variables make business sense. What could invalidate it: SHAP explains the model, not the causes of income; some variables appear "
               "twice (is_married and marital-status). Likely question: gain, permutation or SHAP? They answer different questions.")
 with_figure(s, ["Age, marriage, education and occupation matter most",
@@ -296,7 +296,7 @@ with_figure(s, ["Age, marriage, education and occupation matter most",
                 "SHAP explains the model, not the causes"], "slide_shap.png")
 
 s = new_slide("We can trust the probabilities",
-              "Speaker C. What: reliability diagram, Brier score and ECE on the validation set, Platt and isotonic compared. Why: a bank uses the "
+              "Speaker Elie. What: reliability diagram, Brier score and ECE on the validation set, Platt and isotonic compared. Why: a bank uses the "
               "probability to value a contact. What could invalidate it: the middle bins have few people; calibration holds for the 1994 population. "
               "Likely question: why not recalibrate? The gain is under 0.001 Brier, so we keep the simpler model.")
 callout(s, 0.6, 1.8, 2.8, N["eceCalRaw"], "ECE of the model", BLUE)
@@ -308,7 +308,7 @@ card(s, 6.7, 1.6, 6.0, 5.2)
 picture(s, "slide_calibration.png", 6.8, 1.7, 5.8, 5.0)
 
 s = new_slide("Women are missed more often",
-              "Speaker C. What: equal opportunity on sex, then one threshold per sex chosen on validation, before and after on the test set. "
+              "Speaker Joshaï. What: equal opportunity on sex, then one threshold per sex chosen on validation, before and after on the test set. "
               "Why: base rates differ, so equal selection rates would not be fair. What could invalidate it: using sex at decision time is disparate "
               "treatment; labels reflect 1994 pay; intervals ignore threshold estimation. Likely question: why not just drop the sex column? Proxies.")
 callout(s, 0.6, 1.8, 2.8, N["gapPointsBefore"], "points of recall gap", ORANGE)
@@ -321,7 +321,7 @@ card(s, 6.7, 1.6, 6.0, 5.2)
 picture(s, "slide_fairness.png", 6.8, 1.7, 5.8, 5.0)
 
 s = new_slide("Results, lessons and limits",
-              "Speaker C. What: final model on the test set used once, with bootstrap intervals. Lessons: the model family mattered more than tuning; "
+              "Speaker Joshaï. What: final model on the test set used once, with bootstrap intervals. Lessons: the model family mattered more than tuning; "
               "threshold tuning gives the same F1 as reweighting and keeps the probabilities; dropping sex is not enough. "
               "What could invalidate it: one split and one seed, 1994 data, rows assumed independent. Contribution and AI use: say who did what and how "
               "the AI assistant was used (see the report). Likely question: what next? Real costs for the threshold, monitoring, refit on train plus validation.")
