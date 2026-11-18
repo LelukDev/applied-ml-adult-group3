@@ -229,16 +229,37 @@ box(title, 0.9, 3.5, 11.5, 0.8, ["A calibrated and fairness-audited model on the
 box(title, 0.9, 5.3, 11.5, 1.2, ["Applied ML: Foundations, Engineering & Evaluation, group 3",
                                  "Josha\u00ef Bensoussan, Lucas Noury, Elie Maarek"], 18, color="FFFFFF")
 
-s = new_slide("We predict who earns more than 50K",
-              "Speaker A. What: predict income above 50K on UCI Adult. Why: a bank wants to pre-select customers for a premium offer. "
-              "What could invalidate it: no date and no person id, so rows are assumed independent; data from 1994. "
-              "Likely question: why remove duplicates before the split? Because the same person could be in train and test.")
-with_figure(s, [f"{N['nClean']} people, {N['posRate']} above 50K",
-                f"Split {N['nTrain']} / {N['nVal']} / {N['nTest']}, stratified",
-                "Test set used once, at the end",
-                "No date or ID: rows assumed independent"], "slide_eda.png")
+s = new_slide("Goal: predict who earns more than 50K",
+              "Speaker A. What: a bank wants to offer a premium product without asking for a payslip, so we predict income from socio-demographic data "
+              "(UCI Adult). Why: three questions: is the ranking good, can we trust the probabilities, is the model fair? The roadmap shows the steps "
+              "and the requirement number of each one. What could invalidate it: a census sample from 1994 is not a bank's customers. "
+              "Likely question: why this dataset? It is the one chosen by the group; it has a sensitive attribute (sex) for the fairness audit.")
+box(s, 0.6, 1.7, 12.1, 2.2, ["A bank wants to offer a premium product to people who earn more than 50K, without a payslip",
+                             f"UCI Adult: {N['nClean']} people, 14 variables, {N['posRate']} above 50K",
+                             "Three questions: is the ranking good, can we trust the probabilities, is it fair?"],
+    22, bullet=True, space=14)
+steps = [("1", "Data and split"), ("2", "Features"), ("3", "Imbalance"), ("4-5", "3 models, 1 Pipeline"),
+         ("6-7", "Optuna and run log"), ("8", "SHAP"), ("9", "Calibration"), ("10", "Fairness")]
+width, gap = 1.42, 0.105
+for i, (num, text) in enumerate(steps):
+    left = 0.6 + i * (width + gap)
+    card(s, left, 4.35, width, 1.75)
+    box(s, left + 0.12, 4.5, width - 0.24, 0.5, [num], 22, color=BLUE, bold=True)
+    box(s, left + 0.12, 5.1, width - 0.24, 0.9, [text], 14, color=TEXT, bold=True)
+box(s, 0.6, 6.3, 12.1, 0.4, ["Requirement numbers of the project brief. At the end the model is served by an API (POST /predict)."],
+    14, color=GREY)
 
-s = new_slide("No remedy for imbalance beat the true class mix",
+s = new_slide("Clean data, an honest split, the right metric",
+              "Speaker A. What: 52 exact duplicates removed before the split, stratified 60/20/20 split with seed 42, test set used once. "
+              "Why: the same person in train and test would inflate the scores. What could invalidate it: no date and no person id, so we cannot "
+              "make a time or group split; rows are assumed independent. Metric: PR-AUC, because three people out of four are at most 50K and "
+              "accuracy hides the minority class. Likely question: what is the baseline? Always predicting the prevalence: PR-AUC 0.239.")
+with_figure(s, [f"{N['nClean']} people after removing {N['nDup']} duplicates, {N['posRate']} above 50K",
+                f"Stratified split {N['nTrain']} / {N['nVal']} / {N['nTest']}, test used once",
+                f"Main metric: PR-AUC. Always answering no gives {N['cvDummyNone']}",
+                "No date or ID: rows are assumed independent"], "slide_eda.png")
+
+s = new_slide("Better variables, and no resampling needed",
               "Speaker A. What: missing as a category, five new variables, three remedies compared with the same CV. "
               "Why: remedies must be justified by results. What could invalidate it: SMOTE interpolates one-hot columns, we did not test SMOTENC. "
               "Likely question: why not use class weights? They make the probabilities over-confident.")
@@ -292,22 +313,26 @@ s = new_slide("Women are found less often; thresholds help",
               "treatment; labels reflect 1994 pay; intervals ignore threshold estimation. Likely question: why not just drop the sex column? Proxies.")
 callout(s, 0.6, 1.8, 2.8, N["gapPointsBefore"], "points of recall gap", ORANGE)
 callout(s, 3.5, 1.8, 2.8, N["gapPointsAfter"], "after one threshold per sex", GREEN)
-box(s, 0.6, 3.7, 5.7, 3.1, [f"Removing the sex column helps only a little (gap {N['gapNoSex']})",
+box(s, 0.6, 3.7, 5.7, 3.2, ["Goal: same recall for eligible women and men (equal opportunity)",
+                            f"Removing the sex column helps only a little (gap {N['gapNoSex']})",
                             "The gap interval now contains zero",
-                            f"Cost: accuracy {N['accBefore']} to {N['accAfter']}, lower precision for women"], 22, bullet=True, space=16)
+                            f"Cost: accuracy {N['accBefore']} to {N['accAfter']}, lower precision for women"], 19, bullet=True, space=10)
 card(s, 6.7, 1.6, 6.0, 5.2)
 picture(s, "slide_fairness.png", 6.8, 1.7, 5.8, 5.0)
 
-s = new_slide("Results and limits",
-              "Speaker C. What: final model on the test set used once, with bootstrap intervals. What could invalidate it: one split and one seed, "
-              "1994 data, rows assumed independent. Contribution and AI use: say who did what and how the AI assistant was used (see the report). "
-              "Likely question: what next? Real costs for the threshold, monitoring, refit on train plus validation.")
-callout(s, 0.6, 1.8, 3.8, N["testPrAuc"], f"PR-AUC on test (no skill {N['prevalenceTest']})")
-callout(s, 4.7, 1.8, 3.8, N["testFOne"], "F1 on test")
-callout(s, 8.8, 1.8, 3.8, N["brierSkill"], "Brier skill score")
-box(s, 0.6, 4.1, 12.1, 2.7, ["Limits: 1994 data, one split, rows assumed independent, binary sex",
-                             "Using sex at decision time may be illegal in some settings",
-                             "AI use: an AI coding assistant helped write the code and the report (see the report)"], 22, bullet=True, space=16)
+s = new_slide("Results, lessons and limits",
+              "Speaker C. What: final model on the test set used once, with bootstrap intervals. Lessons: the model family mattered more than tuning; "
+              "threshold tuning gives the same F1 as reweighting and keeps the probabilities; dropping sex is not enough. "
+              "What could invalidate it: one split and one seed, 1994 data, rows assumed independent. Contribution and AI use: say who did what and how "
+              "the AI assistant was used (see the report). Likely question: what next? Real costs for the threshold, monitoring, refit on train plus validation.")
+callout(s, 0.6, 1.6, 3.8, N["testPrAuc"], f"PR-AUC on test (no skill {N['prevalenceTest']})")
+callout(s, 4.7, 1.6, 3.8, N["testFOne"], "F1 on test")
+callout(s, 8.8, 1.6, 3.8, N["brierSkill"], "Brier skill score")
+box(s, 0.6, 3.75, 12.1, 3.2, ["Lessons: the model family mattered more than tuning, and threshold tuning beat resampling",
+                              "Ready to use: one saved Pipeline served by an API (POST /predict)",
+                              "Limits: 1994 data, one split, rows assumed independent, binary sex; using sex at decision time may be illegal",
+                              "AI use: an AI coding assistant helped write the code and the report (see the report)"],
+    19, bullet=True, space=9)
 
 
 # ---- backup slides ----------------------------------------------------------------------------
