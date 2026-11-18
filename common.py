@@ -77,7 +77,7 @@ def make_model(name, class_weight=None, **params):
         return DummyClassifier(strategy="prior")
     if name == "logreg":
         args = {"C": 1.0, "max_iter": 2000, **params}
-        return LogisticRegression(class_weight=class_weight, **args)
+        return LogisticRegression(class_weight=class_weight, random_state=SEED, **args)
     if name == "random_forest":
         args = {"n_estimators": 400, "min_samples_leaf": 3, "max_features": "sqrt", "n_jobs": -1, **params}
         return RandomForestClassifier(class_weight=class_weight, random_state=SEED, **args)
