@@ -101,9 +101,9 @@ Fairness by sex (equal opportunity): the recall gap between men and women falls 
 
 ## Use of AI
 
-We used an AI coding assistant to write a first version of the code and of the report,
-then to simplify the code and to rewrite the report. See the section on AI use in the report
-for what the group did and checked itself.
+We chose the topic and the dataset, took the final decisions and checked the results against the result tables.
+We used an AI coding assistant for the code, the report, the figures and the slides.
+See the section on AI use in the report.
 
 ## Report structure
 
