@@ -104,3 +104,7 @@ Fairness by sex (equal opportunity): the recall gap between men and women falls 
 We used an AI coding assistant to write a first version of the code and of the report,
 then to simplify the code and to rewrite the report. See the section on AI use in the report
 for what the group did and checked itself.
+
+## Report structure
+
+The report (`report/report_group3.pdf`) has 9 pages of main text: business problem and data (1), exploratory analysis and split (2), features (3), imbalance and models (4), tuning and run log (5), explainability (6), calibration (7), fairness (8) and conclusion (9). The contribution statement, the AI-use statement and the appendices come after.
