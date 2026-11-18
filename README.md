@@ -112,3 +112,7 @@ The report (`report/report_group3.pdf`) has 9 pages of main text: business probl
 ## Team
 
 Group 3: Joshaï Bensoussan, Lucas Noury, Elie Maarek. Lucas worked mostly on the analysis (data exploration, models, tuning, explanations, calibration, fairness audit). Joshaï worked mostly on the report (creation, structure, format). Elie helped on the analysis and on checking the results. The full statement is in the report.
+
+## Quick check
+
+After `pip install -r requirements.txt`, two commands check the project in less than a minute: `pytest` runs the 10 tests (split, pipeline, metrics, API) and `python check_consistency.py` checks the sums and the claims of the report against the result tables. `./run_all.sh` rebuilds all the results from scratch.
