@@ -202,7 +202,7 @@ def picture(slide, name, left, top, width, height):
 def new_slide(title, notes, backup=False):
     slide = prs.slides.add_slide(blank)
     page["n"] += 1
-    box(slide, 0.6, 0.45, 12.1, 1.1, [("Backup: " if backup else "") + title], 32, color=NAVY, bold=True)
+    box(slide, 0.6, 0.45, 12.1, 1.1, [("Backup: " if backup else "") + title], 36, color=NAVY, bold=True)
     box(slide, 0.6, 7.0, 6, 0.3, ["Group 3  |  Applied ML  |  UCI Adult"], 11, color=GREY)
     box(slide, 11.7, 7.0, 1.0, 0.3, [str(page["n"] + 1)], 11, color=GREY, align=PP_ALIGN.RIGHT)
     slide.notes_slide.notes_text_frame.text = notes
@@ -249,7 +249,7 @@ for i, (num, text) in enumerate(steps):
 box(s, 0.6, 6.3, 12.1, 0.4, ["Requirement numbers of the project brief. At the end the model is served by an API (POST /predict)."],
     14, color=GREY)
 
-s = new_slide("Clean data, an honest split, the right metric",
+s = new_slide("Clean data and an honest split",
               "Speaker A. What: 52 exact duplicates removed before the split, stratified 60/20/20 split with seed 42, test set used once. "
               "Why: the same person in train and test would inflate the scores. What could invalidate it: no date and no person id, so we cannot "
               "make a time or group split; rows are assumed independent. Metric: PR-AUC, because three people out of four are at most 50K and "
@@ -259,7 +259,7 @@ with_figure(s, [f"{N['nClean']} people after removing {N['nDup']} duplicates, {N
                 f"Main metric: PR-AUC. Always answering no gives {N['cvDummyNone']}",
                 "No date or ID: rows are assumed independent"], "slide_eda.png")
 
-s = new_slide("Better variables, and no resampling needed",
+s = new_slide("New variables, no resampling",
               "Speaker A. What: missing as a category, five new variables, three remedies compared with the same CV. "
               "Why: remedies must be justified by results. What could invalidate it: SMOTE interpolates one-hot columns, we did not test SMOTENC. "
               "Likely question: why not use class weights? They make the probabilities over-confident.")
@@ -268,7 +268,7 @@ with_figure(s, [f"Missing occupation is informative: {N['posRateMissOcc']} earn 
                 "Class weights and SMOTE: no better ranking, worse probabilities",
                 "We keep the true class mix and tune the threshold"], "slide_remedies.png")
 
-s = new_slide("LightGBM ranks best, and each step adds something",
+s = new_slide("LightGBM ranks best",
               "Speaker B. What: logistic regression, random forest, LightGBM, each one Pipeline. Why: each step adds something "
               "(non-linearity, then sequential correction). What could invalidate it: same folds for all models. "
               "Likely question: why does LightGBM beat the forest? Boosting corrects the errors step by step.")
@@ -277,7 +277,7 @@ with_figure(s, [f"No skill: PR-AUC {N['cvDummyNone']} (the prevalence)",
                 "Trees can capture interactions that a linear model cannot",
                 "One Pipeline per model, refitted in each fold"], "slide_models.png")
 
-s = new_slide("Tuning gives a small gain, test set untouched",
+s = new_slide("Tuning gives a small gain",
               "Speaker B. What: one Optuna study per model, 5-fold stratified CV on the training set. Why: tune with CV, report with validation "
               "and test. What could invalidate it: the best CV score is optimistic, we did not use nested CV. "
               "Likely question: why not nested CV? It is optional in the course and we keep an untouched test set.")
@@ -295,7 +295,7 @@ with_figure(s, ["Age, marriage, education and occupation matter most",
                 "Sex has a small direct effect; marriage and relationship matter more",
                 "SHAP explains the model, not the causes"], "slide_shap.png")
 
-s = new_slide("The probabilities can be used as they are",
+s = new_slide("We can trust the probabilities",
               "Speaker C. What: reliability diagram, Brier score and ECE on the validation set, Platt and isotonic compared. Why: a bank uses the "
               "probability to value a contact. What could invalidate it: the middle bins have few people; calibration holds for the 1994 population. "
               "Likely question: why not recalibrate? The gain is under 0.001 Brier, so we keep the simpler model.")
@@ -307,7 +307,7 @@ box(s, 0.6, 3.7, 5.7, 3.0, [f"Mean prediction {N['meanPredRaw']}, observed {N['o
 card(s, 6.7, 1.6, 6.0, 5.2)
 picture(s, "slide_calibration.png", 6.8, 1.7, 5.8, 5.0)
 
-s = new_slide("Women are found less often; thresholds help",
+s = new_slide("Women are missed more often",
               "Speaker C. What: equal opportunity on sex, then one threshold per sex chosen on validation, before and after on the test set. "
               "Why: base rates differ, so equal selection rates would not be fair. What could invalidate it: using sex at decision time is disparate "
               "treatment; labels reflect 1994 pay; intervals ignore threshold estimation. Likely question: why not just drop the sex column? Proxies.")
@@ -362,7 +362,7 @@ rows = [["Model", "Imbalance", "CV PR-AUC", "Val ROC-AUC", "Val F1 at 0.5", "Val
 for _, r in models.iterrows():
     rows.append([label[r.model], r.imbalance, f"{r.cv_pr_auc_mean:.3f}", f"{r.val_roc_auc:.3f}",
                  f"{r['val_f1_at_0.5']:.3f}", f"{r.val_f1_tuned:.3f}", f"{r.val_brier:.3f}"])
-table_slide("All models and imbalance strategies",
+table_slide("All models and remedies",
             "Use if asked about the full comparison. Same CV for all models; threshold from out-of-fold predictions.",
             rows, [3.0, 1.8, 1.5, 1.6, 1.6, 1.5, 1.3], size=13)
 
