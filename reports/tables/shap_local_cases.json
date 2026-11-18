@@ -1,0 +1,118 @@
+{
+  "true_positive": {
+    "proba": 0.9997537943746047,
+    "y_true": 1,
+    "threshold": 0.34381073206740964,
+    "raw_row": {
+      "age": 32.0,
+      "workclass": "Federal-gov",
+      "fnlwgt": 42900.0,
+      "education": "Prof-school",
+      "education-num": 15.0,
+      "marital-status": "Married-civ-spouse",
+      "occupation": "Prof-specialty",
+      "relationship": "Husband",
+      "race": "White",
+      "sex": "Male",
+      "capital-gain": 15024.0,
+      "capital-loss": 0.0,
+      "hours-per-week": 50.0,
+      "native-country": "United-States"
+    },
+    "top_contributions": {
+      "capital-gain": 3.929,
+      "log_capital_net": 2.734,
+      "education-num": 1.431,
+      "is_married": 0.445,
+      "workclass": 0.36,
+      "age": 0.358
+    }
+  },
+  "false_negative": {
+    "proba": 0.18977523539039656,
+    "y_true": 1,
+    "threshold": 0.34381073206740964,
+    "raw_row": {
+      "age": 27.0,
+      "workclass": "Self-emp-not-inc",
+      "fnlwgt": 208577.0,
+      "education": "Some-college",
+      "education-num": 10.0,
+      "marital-status": "Married-civ-spouse",
+      "occupation": "Exec-managerial",
+      "relationship": "Husband",
+      "race": "White",
+      "sex": "Male",
+      "capital-gain": 0.0,
+      "capital-loss": 0.0,
+      "hours-per-week": 45.0,
+      "native-country": "United-States"
+    },
+    "top_contributions": {
+      "is_married": 0.633,
+      "age": -0.51,
+      "occupation": 0.415,
+      "marital-status": 0.405,
+      "hours-per-week": 0.29,
+      "workclass": -0.289
+    }
+  },
+  "false_positive": {
+    "proba": 0.5011997577895869,
+    "y_true": 0,
+    "threshold": 0.34381073206740964,
+    "raw_row": {
+      "age": 37.0,
+      "workclass": "Self-emp-inc",
+      "fnlwgt": 116554.0,
+      "education": "Masters",
+      "education-num": 14.0,
+      "marital-status": "Divorced",
+      "occupation": "Exec-managerial",
+      "relationship": "Not-in-family",
+      "race": "White",
+      "sex": "Female",
+      "capital-gain": 0.0,
+      "capital-loss": 0.0,
+      "hours-per-week": 70.0,
+      "native-country": "United-States"
+    },
+    "top_contributions": {
+      "education-num": 1.302,
+      "occupation": 0.711,
+      "is_married": -0.531,
+      "age": 0.517,
+      "hours-per-week": 0.447,
+      "workclass": 0.332
+    }
+  },
+  "borderline": {
+    "proba": 0.34381073206740964,
+    "y_true": 1,
+    "threshold": 0.34381073206740964,
+    "raw_row": {
+      "age": 57.0,
+      "workclass": "Private",
+      "fnlwgt": 78020.0,
+      "education": "HS-grad",
+      "education-num": 9.0,
+      "marital-status": "Married-civ-spouse",
+      "occupation": "Craft-repair",
+      "relationship": "Husband",
+      "race": "White",
+      "sex": "Male",
+      "capital-gain": 0.0,
+      "capital-loss": 0.0,
+      "hours-per-week": 40.0,
+      "native-country": "United-States"
+    },
+    "top_contributions": {
+      "age": 0.858,
+      "is_married": 0.761,
+      "marital-status": 0.459,
+      "education-num": -0.362,
+      "relationship": 0.193,
+      "log_capital_net": -0.142
+    }
+  }
+}

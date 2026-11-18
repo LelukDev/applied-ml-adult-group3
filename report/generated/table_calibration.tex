@@ -1,0 +1,10 @@
+\begin{tabular}{lrrrr}
+\toprule
+Candidate & Brier & ECE & PR-AUC & Mean prediction \\
+\midrule
+LightGBM as is & 0.0873 & 0.0085 & 0.831 & 0.239 \\
+with class weights & 0.1085 & 0.1049 & 0.831 & 0.344 \\
+Platt scaling & 0.0872 & 0.0060 & 0.831 & 0.239 \\
+isotonic regression & 0.0873 & 0.0078 & 0.831 & 0.239 \\
+\bottomrule
+\end{tabular}

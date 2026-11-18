@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+runs/models/
+report/*.aux
+report/*.log
+report/*.out
+notes/
+slides/*.pptx

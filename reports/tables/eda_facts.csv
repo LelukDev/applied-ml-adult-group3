@@ -1,0 +1,15 @@
+,value
+n_raw,48842.0
+n_duplicates,52.0
+n_after_duplicates,48790.0
+pos_rate_married,0.4434969598101735
+pos_rate_not_married,0.06511274385609324
+pos_rate_male,0.3028553915308781
+pos_rate_female,0.11137465195421264
+husband_share_men,0.6035143280380038
+husband_share_women,0.0
+part_time_share_men,0.1190172140777443
+part_time_share_women,0.2733835206764979
+capital_gain_zero_pct,91.869918699187
+capital_loss_zero_pct,95.37815126050421
+capital_gain_max,99999.0

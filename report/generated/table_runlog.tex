@@ -1,0 +1,14 @@
+\begin{tabular}{lrl}
+\toprule
+Stage & Runs & Content \\
+\midrule
+compare & 10 & no skill + 3 models x 3 imbalance strategies \\
+ablation & 4 & raw vs engineered features \\
+optuna & 120 & one row per trial \\
+tuned & 3 & best trial of each model, refitted \\
+calibration & 4 & calibration candidates \\
+final\_test & 1 & final model on the test set \\
+fairness & 3 & three decision policies \\
+total & 145 &  \\
+\bottomrule
+\end{tabular}

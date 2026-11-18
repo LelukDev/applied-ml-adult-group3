@@ -1,0 +1,288 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.1cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\setlist{itemsep=1pt,topsep=3pt}
+\captionsetup{font=small}
+\graphicspath{{../reports/figures/}}
+\input{generated/numbers.tex}
+
+\newcommand{\repo}{\url{https://github.com/LelukDev/applied-ml-adult-group3}}
+\newcommand{\tablefile}[1]{\begin{center}\small\resizebox{\linewidth}{!}{\input{generated/#1}}\end{center}}
+
+\title{\vspace{-1.2cm}Predicting income above 50K on the UCI Adult dataset\\[3pt]
+\large Applied ML: Foundations, Engineering \& Evaluation, final project of group 3}
+\author{Josha\"{\i} Bensoussan \and Lucas Noury \and Elie Maarek}
+\date{Albert School, Fall 2026 \quad Code: \repo}
+
+\begin{document}
+\maketitle
+\vspace{-0.8cm}
+\begin{center}
+\fbox{\parbox{0.94\textwidth}{\textbf{Dataset used:} UCI Adult (census income), \nRaw{} people from the 1994 US census, loaded with \texttt{fetch\_openml(name="adult", version=2)}. Target: income above 50K (\posRate{} of the people). Sensitive attribute audited: sex.}}
+\end{center}
+
+\begin{abstract}
+\noindent We build and evaluate a model that predicts whether a person earns more than 50K a year. We compare a logistic regression, a random forest and LightGBM with the same 5-fold stratified cross-validation, and we test three ways of handling the class imbalance. Each model is tuned with Optuna. The final model is the tuned LightGBM (\finalName). On a test set used once, it reaches a PR-AUC of \testPrAuc{} (no-skill baseline \prevalenceTest) and an F1 of \testFOne{}, and its probabilities are well calibrated (ECE \testEce{} on the test set). At one common threshold, women who earn more than 50K are found less often than men (recall \tprFemaleBefore{} against \tprMaleBefore). Removing the sex column helps only a little. Group-specific thresholds chosen on validation reduce the gap from \gapPointsBefore{} to \gapPointsAfter{} points, at a small cost in accuracy.
+\end{abstract}
+
+\section{Business problem and data}
+We take the point of view of a retail bank that wants to offer a premium product to people who earn more than 50K a year, using only socio-demographic information (no payslip). An eligible person who is missed means lost revenue and an unfair exclusion. A wrong offer means a wasted contact. Both errors matter. We rank people with PR-AUC and choose an operating point with F1. We also check that the probabilities can be trusted (calibration) and that the errors are not concentrated on one group (fairness).
+
+The data have 14 variables: six numeric (age, fnlwgt, education-num, capital-gain, capital-loss, hours-per-week) and eight categorical (workclass, education, marital-status, occupation, relationship, race, sex, native-country). One row is one person.
+
+\section{Exploratory analysis and split (requirement 1)}\label{sec:eda}
+\subsection{Framing and leakage audit}
+The model estimates $P(\text{income} > 50\text{K} \mid \text{profile})$ for one person. Table~\ref{tab:audit} lists what each group of variables means at prediction time. The file has no date and no person identifier, so we cannot make a time split or a group split. We assume that the rows are independent, which is a limit of the data.
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{p{3.3cm}p{3.1cm}p{7.3cm}}
+\toprule
+Variables & Known at prediction? & Risk and decision \\
+\midrule
+age, sex, race, native-country & Yes (declared) & Low risk. Sex and race are sensitive: we audit them in Section~\ref{sec:fair}. \\
+education, marital-status, relationship & Yes & Medium risk. \texttt{relationship} (Husband, Wife) is a proxy of sex. \texttt{education} is the same information as \texttt{education-num}, so we drop it. \\
+workclass, occupation, hours-per-week & Yes & Low risk. Kept. \\
+capital-gain, capital-loss & Yes & Medium risk: they are close to an income, so they are almost a consequence of the target. Kept and discussed. \\
+fnlwgt & Not a property of the person & It is a census sampling weight. Dropped. \\
+\bottomrule
+\end{tabular}
+\caption{Leakage audit of the variables.}\label{tab:audit}
+\end{table}
+
+\subsection{What the data look like}
+All statistics in this section use the training set only, so the test set has no influence on our choices.
+\begin{itemize}
+\item \nDup{} rows are exact duplicates. We remove them before splitting, so that the same record cannot be in the training and in the test set. This leaves \nClean{} people.
+\item Missing values (coded ``?'') appear in workclass (\missWork), occupation (\missOcc) and native-country (\missCountry). Workclass and occupation are missing for almost the same people. These people are not like the others: the share above 50K is \posRateMissOcc{} when the occupation is missing, against \posRatePresentOcc{} otherwise. Missing is therefore informative, and we keep it as its own category instead of replacing it with the most frequent value.
+\item Capital gain is zero for \capGainZero{} of the people and capital loss for \capLossZero. Both have a long tail.
+\item The share above 50K is \posMale{} for men and \posFemale{} for women, and \posMarried{} for married people against \posNotMarried{} for the others. The variable \texttt{relationship} is almost a copy of sex: \husbandMen{} of the men are ``Husband'' and almost no woman is. Women also work part-time (less than 35 hours) more often than men (\partTimeWomen{} against \partTimeMen). These points matter again in Section~\ref{sec:fair}.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\linewidth]{eda_positive_rate_sex_relationship.png}
+\caption{Share of people above 50K by sex and by relationship (training set). The dashed line is the overall rate.}
+\end{figure}
+
+\subsection{Split and baseline}
+We split the \nClean{} people once, with stratification on the target and seed 42 (Table~\ref{tab:split}). Before the split, rows are sorted, so the result does not depend on the order of the data source. We checked that the OpenML data and the csv copy in the repository give exactly the same split. The training set is used for fitting, cross-validation, Optuna and the choice of the model family. The validation set is used for the calibration method, the decision threshold and the fairness thresholds. The test set is used once at the end. No choice (features, model, hyperparameters, threshold, calibration, fairness thresholds) uses the test set.
+
+\begin{table}[H]
+\centering\small
+\input{generated/table_split.tex}
+\caption{Stratified split.}\label{tab:split}
+\end{table}
+
+About three people out of four are at most 50K, so accuracy is a poor metric: a model that always answers ``at most 50K'' is right for three people out of four and finds nobody. Our no-skill baseline always predicts the training prevalence. Its PR-AUC is the prevalence (\cvDummyNone), and its Brier score is \brierNoSkill{} on the test set.
+
+\section{Feature engineering (requirement 2)}
+Categorical variables are one-hot encoded, with rare levels (fewer than 30 people) grouped together. Numeric variables are standardised. Missing categories become the level ``Missing''. We create five variables:
+\begin{enumerate}
+\item \texttt{log\_capital\_net} and \texttt{has\_capital}: a signed logarithm of capital gain minus capital loss, and a flag for any capital income. The raw variables are mostly zeros with a long tail, so a linear model cannot use them well.
+\item \texttt{is\_married}: one flag for civil or armed-forces spouse, instead of seven marital statuses. It carries a strong signal (\posMarried{} against \posNotMarried{}).
+\item \texttt{overtime\_hours}: hours above 40. The effect of hours is not linear around the usual week.
+\item \texttt{is\_us}: native-country has 41 levels and most have few people.
+\end{enumerate}
+We drop \texttt{fnlwgt} and \texttt{education} for the reasons in Table~\ref{tab:audit}.
+
+To check that the new variables help, we compare raw and engineered variables with the same 5-fold cross-validation (Table~\ref{tab:ablation}). For the logistic regression, the PR-AUC goes from \ablLogRaw{} to \ablLogEng{} (+\ablLogGain{} points, fold standard deviation \ablLogSd). For LightGBM, it goes from \ablLgbRaw{} to \ablLgbEng{}, which is within the fold standard deviation (\ablLgbSd). Trees find thresholds and interactions by themselves. We keep the new variables because they help the linear model and cost nothing for the trees.
+
+\begin{table}[H]
+\centering\small
+\input{generated/table_ablation.tex}
+\caption{Raw against engineered variables (5-fold CV on the training set, default hyperparameters).}\label{tab:ablation}
+\end{table}
+
+\section{Class imbalance and models (requirements 3, 4 and 5)}
+\paragraph{Metrics.} PR-AUC (average precision) is our main metric for ranking, because the positive class is the minority. ROC-AUC is a complement. F1, precision and recall are computed at a threshold. Brier score and ECE measure the quality of the probabilities. Accuracy is only for reference.
+
+\paragraph{Three remedies.} We compare (a) nothing, (b) class weights (\texttt{class\_weight="balanced"}), and (c) SMOTE inside the training folds, through an \texttt{imblearn} pipeline so that synthetic people never reach a validation fold. For each one we choose the threshold that maximises F1 on out-of-fold training predictions, and we apply it unchanged to the validation set.
+
+\paragraph{One Pipeline.} Every candidate is one Pipeline: feature creation, scaling and encoding, then the model. The same object is cross-validated, tuned, calibrated, explained and saved, and it is refitted on the training folds only during cross-validation.
+
+\tablefile{table_models.tex}
+\captionof{table}{Three models and three imbalance strategies, default hyperparameters. CV is 5-fold on the training set. ``Tuned thr.'' is the F1-optimal threshold from out-of-fold training predictions. All other columns are on the validation set except the first.}\label{tab:models}
+
+\paragraph{What each step buys.} Going from no skill to a linear model is the biggest jump: PR-AUC goes from \cvDummyNone{} to \cvLogNone. The random forest reaches \cvRfNone{} and LightGBM \cvLgbNone. Trees probably gain from non-linear effects and interactions, but we did not test which ones.
+
+\paragraph{What the remedies change.} None of the three remedies improves the ranking: the PR-AUC is never higher than without a remedy, and it is lower by up to \remedyLossMax{} points. With \posRate{} of positives, the problem is only moderately imbalanced. Class weights raise the Brier score of LightGBM from \brierLgbNone{} to \brierLgbBal, and SMOTE to \brierLgbSmote, so they damage the probabilities. Tuning the threshold alone is enough for F1: LightGBM without a remedy goes from \fHalfLgbNone{} at 0.5 to \fTunedLgbNone{} with the tuned threshold. This is close to SMOTE at 0.5 (\fHalfLgbSmote) and better than class weights at 0.5 (\fHalfLgbBal). SMOTE also interpolates between one-hot columns and creates ``half-married'' people. SMOTENC would avoid this, but SMOTE brought no gain in ranking, so we did not try it.
+
+Decision: we do not reweight or resample. The models are trained on the true class mix, and the threshold is tuned on held-out data. This keeps usable probabilities, which a bank needs to estimate the value of a contact.
+
+\section{Hyperparameter tuning and run log (requirements 6 and 7)}
+\paragraph{Setup.} We run one Optuna study per model with the TPE sampler (seed 42). One trial is one set of hyperparameters scored by the mean PR-AUC over the same 5 stratified folds of the training set. The whole Pipeline is refitted in each fold. The search spaces are in Appendix C. The best score of a study is optimistic, because the same folds chose the winner. This is why we also report validation scores and a test score. We did not use nested cross-validation: with a test set of \nTest{} people that stays untouched, the final estimate is precise enough.
+
+
+
+\tablefile{table_tuned.tex}
+\captionof{table}{Default against tuned hyperparameters. CV is on the training set, the other scores are on the validation set.}\label{tab:tuned}
+
+\paragraph{Result.} Tuning helps a little, and more for the more flexible models. The logistic regression gains \tunedGainLog{} points of CV PR-AUC. Its best \texttt{C} is \bestLogC, which is weak regularisation, so its limit is that it is linear and not overfitting. The random forest gains \tunedGainRf{} points and LightGBM \tunedGainLgb{} points. The best LightGBM uses \bestLgbNEstimators{} small trees (\bestLgbNumLeaves{} leaves) and a low learning rate (\bestLgbLearningRate). The gap between model families is larger than the gain from tuning inside a family, so the choice of the model class mattered more than tuning. On the validation set, tuning changes the PR-AUC by at most \maxValGain{} points, which is within the noise between folds. We keep the tuned models because they are not worse. The final family is LightGBM, chosen on the training CV score only.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\linewidth]{optuna_history.png}
+\caption{CV PR-AUC of each Optuna trial, best score so far, and the default model (dotted line).}
+\end{figure}
+
+\paragraph{Run log.} \texttt{runs/run\_log.csv} has one row for each of the \nRuns{} runs: model comparison, feature ablation, each of the \nOptunaRuns{} Optuna trials, tuned models, calibration candidates, final test and fairness policies. The file \texttt{runs/tuning\_log.csv} lists the \nOptunaRuns{} Optuna trials only, with their parameters, fold scores and artifact (the table of trials and the history plot). The best trial of each model is refitted and saved as a model file. The summary is in Appendix~\ref{app:log}. Model files other than the final model are not versioned and are rebuilt by \texttt{run\_all.sh}.
+
+\section{Explainability (requirement 8)}
+We use \texttt{shap.TreeExplainer} on the tuned LightGBM, on the validation set, in log-odds units. One-hot columns are summed back into their original variable, which is exact because SHAP values are additive.
+
+\paragraph{Global.} The largest mean absolute SHAP values are for \shapOneName{} (\shapOne), \shapTwoName{} (\shapTwo), \shapThreeName{} (\shapThree), \shapFourName{} (\shapFour), \shapFiveName{} (\shapFive) and \shapSixName{} (\shapSix). Some variables appear twice because they exist in two forms (\texttt{is\_married} and \texttt{marital-status}, \texttt{capital-gain} and \texttt{log\_capital\_net}), and the trees share the signal between them. The directions make business sense: being married, being older, having more education, working in a managerial or professional job, working long hours and having capital income all push towards more than 50K. Sex has a smaller direct effect than marriage and relationship, and most of the difference between men and women goes through these variables.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.48\linewidth]{shap_beeswarm.png}\hfill
+\includegraphics[width=0.48\linewidth]{shap_bar.png}
+\caption{Left: SHAP beeswarm (one dot is one person). Right: mean absolute SHAP value by original variable.}
+\end{figure}
+
+\paragraph{Permutation importance} (drop in validation PR-AUC when one raw column is shuffled, 10 repeats) answers another question: how much the score depends on a variable. It ranks \permOneName{} first (\permOne), then \permTwoName{} (\permTwo) and \permThreeName{} (\permThree). Capital gain is rare but decisive when present, so shuffling it hurts the ranking a lot, while age moves every prediction a little. Permutation also under-states correlated variables: \texttt{relationship} costs little when shuffled because \texttt{marital-status} carries the same information.
+
+\paragraph{Individual predictions.} Figure~\ref{fig:local} shows four people from the validation set. (1) The most confident true positive is a \personTpAge-year-old married man with a professional job and a capital gain of \$\personTpGain: capital gain, in its two forms, adds about \localTpCapitalGain{} and \localTpLogCapitalNet{} log-odds. (2) A typical false negative (probability \localFnP, but he earns more than 50K) is a \personFnAge-year-old married, self-employed manager who works \personFnHours{} hours. Marriage (\localFnIsMarried), occupation (\localFnOccupation) and hours (\localFnHoursPerWeek) push up, but his age (\localFnAge) and work class (\localFnWorkclass) pull down. The model sees a young man and misses him. (3) A typical false positive (probability \localFpP, but she earns at most 50K) is a \personFpAge-year-old divorced, self-employed manager with a master's degree who works \personFpHours{} hours. Education (\localFpEducationNum), occupation (\localFpOccupation), age (\localFpAge) and hours (\localFpHoursPerWeek) push up, and only the fact that she is not married (\localFpIsMarried) pulls down. We do not know why she earns less: the data do not say. (4) The person at the threshold (probability \localBlP) is a \personBlAge-year-old married man: age (\localBlAge) and marriage (\localBlIsMarried) push up and education (\localBlEducationNum) pulls down. These are examples, not a proof about all errors, and SHAP explains the model, not the causes of income.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.37\linewidth}\includegraphics[width=\linewidth]{shap_waterfall_true_positive.png}\caption*{(1) true positive}\end{subfigure}\hfill
+\begin{subfigure}{0.37\linewidth}\includegraphics[width=\linewidth]{shap_waterfall_false_negative.png}\caption*{(2) false negative}\end{subfigure}\\[2pt]
+\begin{subfigure}{0.37\linewidth}\includegraphics[width=\linewidth]{shap_waterfall_false_positive.png}\caption*{(3) false positive}\end{subfigure}\hfill
+\begin{subfigure}{0.37\linewidth}\includegraphics[width=\linewidth]{shap_waterfall_borderline.png}\caption*{(4) at the threshold}\end{subfigure}
+\caption{SHAP waterfalls for four people (validation set), in log-odds.}\label{fig:local}
+\end{figure}
+
+\section{Calibration (requirement 9)}
+We compare four candidates, all fitted on the training set and compared on the validation set: the tuned LightGBM as is, the same with class weights, and Platt scaling and isotonic regression applied with \texttt{CalibratedClassifierCV(cv=5)}. Each calibrator is learned on out-of-fold scores, never on in-sample predictions.
+
+\begin{table}[H]
+\centering\small
+\input{generated/table_calibration.tex}
+\caption{Calibration candidates on the validation set (ECE with 15 equal-width bins).}\label{tab:cal}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.46\linewidth]{calibration_reliability.png}
+\caption{Reliability diagram (top) and number of predictions per bin on a log scale (bottom).}\label{fig:rel}
+\end{figure}
+
+\paragraph{Reading.} LightGBM as is follows the diagonal. Its mean prediction (\meanPredRaw) matches the observed rate (\obsRate), and its ECE is \eceCalRaw. The gaps in the 0.1-wide bins are small and have both signs, so the model is neither systematically over-confident nor under-confident. Class weights make the model strongly over-confident: its curve is below the diagonal in every bin, and its mean prediction is \meanPredWeights, because the model was trained as if the positives were half of the data. The ECE goes from \eceCalRaw{} to \eceCalWeights. Platt scaling and isotonic regression give a Brier score within 0.001 of the raw model (\brierCalPlatt{} and \brierCalIso{} against \brierCalRaw), so they bring nothing here. Differences this small are noise, and in S8 the professor says to prefer the simpler method in this case. Our rule is to keep the raw model unless a calibrator lowers the Brier score by more than 0.001. The final model is therefore the tuned LightGBM \finalName.
+
+\paragraph{Can we trust the probabilities?} Yes, as they are, for a decision such as estimating the value of a contact. Two cautions: the bins in the middle contain only a few hundred people, so their gaps have about two points of noise, and the calibration holds for the 1994 population. It should be monitored if the data change. Calibration also holds inside each sex (Section~\ref{sec:fair}).
+
+\paragraph{Final test.} The threshold is \testThr, chosen on validation (best F1). The test set is used here for the first time. Table~\ref{tab:test} gives the result with bootstrap intervals (1000 resamples of the test set, model and threshold fixed). PR-AUC is \trainPrAuc{} on the training set, \tunedCvLgb{} in cross-validation, \valPrAucFinal{} on validation and \testPrAuc{} on test. The model fits the training data better than new data, but validation and test agree, and the validation value is inside the test interval, so we see no sign of overfitting to the selection process. The Brier skill score against the no-skill model is \brierSkill. At the threshold, the model finds \confTp{} of the \confPositives{} people above 50K and flags \confFp{} people by mistake (Figure~\ref{fig:curves}). The F1 threshold is only a placeholder: a real use needs the value of a conversion and the cost of a contact.
+
+\begin{table}[H]
+\centering\small
+\input{generated/table_test.tex}
+\caption{Final model on the test set.}\label{tab:test}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\linewidth]{final_test_curves.png}
+\caption{Precision-recall curve and confusion matrix of the final model on the test set.}\label{fig:curves}
+\end{figure}
+
+\section{Fairness and bias audit (requirement 10)}\label{sec:fair}
+\paragraph{Attribute and definition.} We audit sex. We use equal opportunity: among the people who really earn more than 50K, the chance of being selected should not depend on sex ($\mathrm{TPR}_{\text{men}} = \mathrm{TPR}_{\text{women}}$). We prefer it to demographic parity because the base rates really differ (\prevMaleTest{} of the men and \prevFemaleTest{} of the women are above 50K in the test set). Equal selection rates would mean offering the product to many ineligible women or refusing it to eligible men. We also report the false positive rate gap and the selection-rate ratio, with 95\% bootstrap intervals (1000 resamples of the test set).
+
+\paragraph{Audit.} With one common threshold, eligible women are found \gapPointsBefore{} points less often than eligible men (gap \gapBefore, 95\% interval [\gapLowBefore, \gapHighBefore]). The interval excludes zero. The model ranks women at least as well as men (ROC-AUC \rocFemale{} against \rocMale) and is calibrated in both groups (ECE \eceFemale{} and \eceMale). The problem is the operating point: eligible women get lower scores, so one common cut-off misses more of them. This is probably linked to the points in Section~\ref{sec:eda} (fewer ``Husband'' or ``Wife'', more part-time work), but we did not test it.
+
+\paragraph{First fix: remove the sex column.} We retrain without the variable \texttt{sex}. The gap becomes \gapNoSex{} (interval [\gapLowNoSex, \gapHighNoSex]). On the same resamples of the test set, the gap falls by only \pairedNoSex{} points (95\% interval [\pairedNoSexLow, \pairedNoSexHigh]). Variables such as \texttt{relationship} and marital status probably carry the same information, but we did not test this.
+
+\paragraph{Mitigation: one threshold per sex.} On the validation set we compute the recall of the original policy (\targetTpr) and choose, for each sex, the threshold that gives this recall in that group: \thrFemaleAfter{} for women and \thrMaleAfter{} for men. These thresholds are then fixed and applied to the test set.
+
+\tablefile{table_fair_policies.tex}
+\captionof{table}{Before and after on the untouched test set. DP ratio is the selection rate of women divided by the selection rate of men.}\label{tab:fair}
+
+\paragraph{Result.} The gap in recall falls from \gapPointsBefore{} to \gapPointsAfter{} points, and its interval now contains zero. On the same resamples, the thresholds reduce the gap by \pairedGroup{} points (95\% interval [\pairedGroupLow, \pairedGroupHigh]). The accuracy goes from \accBefore{} to \accAfter{} and the F1 from \fOneBefore{} to \fOneAfter, a small cost. The cost is mostly paid in precision for women (\precFemaleBefore{} to \precFemaleAfter): the bank contacts about \extraWomenContacted{} more women in the test set, and \extraWomenEligible{} of them (\extraWomenShare) are eligible. This is a small sample, and these extra contacts are less precise than the average contact for women. The recall of women on the test set (\tprFemaleAfter) is below the target recall (\targetTpr), because the thresholds are estimated on a small validation set. The false positive gap (\fprGapBefore{} to \fprGapAfter) and the demographic parity ratio (\dpRatioBefore{} to \dpRatioAfter) also improve, although we did not target them. The false positive gap stays large, so the model does not satisfy equalised odds.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\linewidth]{fairness_sex.png}
+\caption{Recall (with 95\% intervals), false positive rate and selection rate by sex for the three policies (test set).}
+\end{figure}
+
+\paragraph{Limits.} Using sex at decision time is disparate treatment and may be illegal in some settings (credit decisions, or insurance pricing in the EU), even if it corrects disparate impact. The labels reflect pay inequality in 1994, and equal opportunity takes them as the truth. The intervals keep the thresholds fixed, so they ignore the uncertainty of estimating the thresholds on the validation set (only a few hundred positive women in each set). The gap at the global threshold is \gapValBefore{} on the validation set and \gapBefore{} on the test set, so the size of the gap itself is uncertain. Race stays a variable of the model and we did not audit it.
+
+\section{Conclusion and limits}
+A tuned LightGBM in one Pipeline ranks high earners well (PR-AUC \testPrAuc{} on the test set) with calibrated probabilities, and group thresholds remove most of the recall gap between men and women for a small loss in accuracy. Three lessons:
+\begin{itemize}
+\item The model family mattered more than hyperparameter tuning.
+\item On this moderately imbalanced problem, threshold tuning gives the same F1 as reweighting and keeps the probabilities usable.
+\item Dropping the sex column reduced the gap by only \pairedNoSex{} points, because other variables carry similar information.
+\end{itemize}
+
+Limits: 1994 data, binary sex, one split and one seed, rows assumed independent, and a census sample is not a bank's customer base. A real use needs the value of a conversion and the cost of a contact to set the threshold, and monitoring of calibration and recall by group.
+
+\newpage
+\section*{Contribution statement}
+[to be written by the group: for each member, what he did and which parts of the code and of the report he can defend]
+
+\section*{Use of AI tools}
+We used an AI coding assistant. It generated a first version of the code and of the report from the project brief and the course slides. In a second pass it simplified the code, changed the split so that the results do not depend on the row order of the data source, rewrote this report and prepared the slides. [to be written by the group: what each member ran, read, checked, changed and rewrote himself.] The first version of the code was written on 17 November outside Git, and the Git history starts on 18 November when it was imported. All numbers in this report are generated from the result tables.
+
+\appendix
+\section{Run log summary}\label{app:log}
+\begin{table}[H]
+\centering\small
+\input{generated/table_runlog.tex}
+\caption{Content of \texttt{runs/run\_log.csv}.}
+\end{table}
+
+\section{Metrics by sex}
+\tablefile{table_fair_groups.tex}
+\captionof{table}{Metrics by sex on the test set for the three policies.}
+
+\section{Search spaces}
+\begin{table}[H]
+\centering\small
+\begin{tabular}{lp{10.4cm}r}
+\toprule
+Model & Search space & Trials \\
+\midrule
+Logistic regression & C from 0.001 to 100 (log); l1\_ratio from 0 to 1 (elastic net, saga) & \nTrialsLog \\
+Random forest & n\_estimators 100 to 500; max\_depth 4 to 40 (log); min\_samples\_leaf 1 to 50 (log); max\_features 0.1 to 0.8; max\_samples 0.5 to 1 & \nTrialsRf \\
+LightGBM & n\_estimators 200 to 1500; learning\_rate 0.01 to 0.2 (log); num\_leaves 8 to 128 (log); min\_child\_samples 5 to 200 (log); subsample 0.5 to 1; colsample\_bytree 0.4 to 1; reg\_lambda and reg\_alpha 0.001 to 10 (log) & \nTrialsLgb \\
+\bottomrule
+\end{tabular}
+\caption{Search spaces. The budget follows the size of each space.}
+\end{table}
+
+\section{Where to find each requirement}
+\begin{table}[H]
+\centering\small
+\begin{tabular}{lll}
+\toprule
+Requirement & Code & Section \\
+\midrule
+1 EDA and split & \texttt{01\_eda.py}, \texttt{get\_splits} in \texttt{common.py} & 2 \\
+2 Features & \texttt{add\_features} in \texttt{common.py}, \texttt{02\_compare\_models.py} & 3 \\
+3 Class imbalance & \texttt{02\_compare\_models.py} & 4 \\
+4 Three models & \texttt{02\_compare\_models.py}, \texttt{06\_final\_test.py} & 4, 7 \\
+5 Pipeline & \texttt{build\_pipeline} in \texttt{common.py} & 4 \\
+6 Optuna & \texttt{03\_tune\_optuna.py} & 5 \\
+7 Run log & \texttt{log\_run} in \texttt{common.py}, \texttt{runs/run\_log.csv} & 5, A \\
+8 SHAP & \texttt{04\_explain.py} & 6 \\
+9 Calibration & \texttt{05\_calibration.py}, \texttt{06\_final\_test.py} & 7 \\
+10 Fairness & \texttt{07\_fairness.py} & 8 \\
+Prediction endpoint & \texttt{serve.py} (see the README) & \\
+\bottomrule
+\end{tabular}
+\caption{Requirements and where they are in the repository.}
+\end{table}
+
+\end{document}

@@ -1,0 +1,16 @@
+\begin{tabular}{llrrrrr}
+\toprule
+Model & Imbalance & CV PR-AUC & Val ROC-AUC & Val F1 at 0.5 & Val F1 tuned thr. & Val Brier \\
+\midrule
+No skill (prior) & none & 0.239 & 0.500 & 0.000 & 0.386 & 0.182 \\
+Logistic regression & none & 0.774 & 0.909 & 0.667 & 0.691 & 0.101 \\
+Logistic regression & class weights & 0.773 & 0.909 & 0.685 & 0.691 & 0.126 \\
+Logistic regression & SMOTE & 0.773 & 0.909 & 0.688 & 0.694 & 0.125 \\
+Random forest & none & 0.809 & 0.920 & 0.689 & 0.717 & 0.093 \\
+Random forest & class weights & 0.808 & 0.922 & 0.708 & 0.718 & 0.113 \\
+Random forest & SMOTE & 0.799 & 0.919 & 0.715 & 0.715 & 0.104 \\
+LightGBM & none & 0.824 & 0.929 & 0.711 & 0.723 & 0.088 \\
+LightGBM & class weights & 0.824 & 0.928 & 0.713 & 0.725 & 0.108 \\
+LightGBM & SMOTE & 0.820 & 0.927 & 0.724 & 0.724 & 0.092 \\
+\bottomrule
+\end{tabular}
