@@ -116,3 +116,9 @@ Group 3: Joshaï Bensoussan, Lucas Noury, Elie Maarek. Lucas worked mostly on th
 ## Quick check
 
 After `pip install -r requirements.txt`, two commands check the project in less than a minute: `pytest` runs the 10 tests (split, pipeline, metrics, API) and `python check_consistency.py` checks the sums and the claims of the report against the result tables. `./run_all.sh` rebuilds all the results from scratch.
+
+## Notes for running the code
+
+* We ran everything with Python 3.12.
+* If OpenML cannot be reached, the data are read from `data/raw/adult-all.csv` (same rows, same split).
+* The full run (`./run_all.sh`) takes 15 to 40 minutes, mostly because of Optuna. The tests and the consistency check are much faster.
