@@ -44,7 +44,7 @@ The data have 14 variables: six numeric (age, fnlwgt, education-num, capital-gai
 \subsection{Framing and leakage audit}
 The model estimates $P(\text{income} > 50\text{K} \mid \text{profile})$ for one person. Table~\ref{tab:audit} lists what each group of variables means at prediction time. The file has no date and no person identifier, so we cannot make a time split or a group split. We assume that the rows are independent, which is a limit of the data.
 
-\begin{table}[H]
+\begin{table}[!t]
 \centering\small
 \begin{tabular}{p{3.3cm}p{3.1cm}p{7.3cm}}
 \toprule
@@ -178,7 +178,7 @@ We compare four candidates, all fitted on the training set and compared on the v
 \caption{Reliability diagram (top) and number of predictions per bin on a log scale (bottom).}\label{fig:rel}
 \end{figure}
 
-\paragraph{Reading.} LightGBM as is follows the diagonal. Its mean prediction (\meanPredRaw) matches the observed rate (\obsRate), and its ECE is \eceCalRaw. The gaps in the 0.1-wide bins are small and have both signs, so the model is neither systematically over-confident nor under-confident. Class weights make the model strongly over-confident: its curve is below the diagonal in every bin, and its mean prediction is \meanPredWeights, because the model was trained as if the positives were half of the data. The ECE goes from \eceCalRaw{} to \eceCalWeights. Platt scaling and isotonic regression give a Brier score within 0.001 of the raw model (\brierCalPlatt{} and \brierCalIso{} against \brierCalRaw), so they bring nothing here. Differences this small are noise, and in S8 the professor says to prefer the simpler method in this case. Our rule is to keep the raw model unless a calibrator lowers the Brier score by more than 0.001. The final model is therefore the tuned LightGBM \finalName.
+\paragraph{Reading.} LightGBM as is follows the diagonal. Its mean prediction (\meanPredRaw) matches the observed rate (\obsRate), and its ECE is \eceCalRaw. The gaps in the 0.1-wide bins are small and have both signs, so the model is neither systematically over-confident nor under-confident. Class weights make the model strongly over-confident: its curve is below the diagonal in every bin, and its mean prediction is \meanPredWeights, because the model was trained as if the positives were half of the data. The ECE goes from \eceCalRaw{} to \eceCalWeights. Platt scaling and isotonic regression give a Brier score within 0.001 of the raw model (\brierCalPlatt{} and \brierCalIso{} against \brierCalRaw), so they bring nothing here. Differences this small are noise, and the course (S8) advises the simpler method in this case. Our rule is to keep the raw model unless a calibrator lowers the Brier score by more than 0.001. The final model is therefore the tuned LightGBM \finalName.
 
 \paragraph{Can we trust the probabilities?} Yes, as they are, for a decision such as estimating the value of a contact. Two cautions: the bins in the middle contain only a few hundred people, so their gaps have about two points of noise, and the calibration holds for the 1994 population. It should be monitored if the data change. Calibration also holds inside each sex (Section~\ref{sec:fair}).
 
